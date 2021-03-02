@@ -1,0 +1,34 @@
+{{- $queryfullName := include "imply.query.fullname" . -}}
+{{- if .Values.query.ingress.pivot -}}
+  {{- if .Values.query.ingress.pivot.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ include "imply.pivot.ingressName" . }}
+  labels:
+{{ include "imply.labels" . | indent 4 }}
+  annotations:
+  {{- with .Values.query.ingress.pivot.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  rules:
+    - http:
+        paths:
+    {{- if .Values.query.ingress.pivot.paths }}
+    {{- range .Values.query.ingress.pivot.paths }}
+          - path: {{ . }}
+            backend:
+              serviceName: {{ $queryfullName }}
+              servicePort: pivot
+    {{- end }}
+    {{- end }}
+    {{- if .Values.query.ingress.pivot.host }}
+      host: {{ .Values.query.ingress.pivot.host }}
+    {{- end }}
+  {{- if .Values.query.ingress.pivot.tls }}
+  tls:
+{{ toYaml .Values.query.ingress.pivot.tls | indent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,35 @@
+{{- $managerFullName := include "imply.manager.fullname" . -}}
+{{- if .Values.manager.ingress.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ include "imply.manager.fullname" . }}
+  labels:
+{{ include "imply.labels" . | indent 4 }}
+  annotations:
+  {{- if .Values.manager.kubernetesMode }}
+    networking.gke.io/managed-certificates: {{ include "imply.manager.fullname" . }}
+  {{- end}}
+  {{- with .Values.manager.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  rules:
+    - http:
+        paths:
+    {{- if .Values.manager.ingress.paths }}
+    {{- range .Values.manager.ingress.paths }}
+          - path: {{ . }}
+            backend:
+              serviceName: {{ $managerFullName }}
+              servicePort: manager-fe
+    {{- end }}
+    {{- end }}
+    {{- if .Values.manager.ingress.host }}
+      host: {{ .Values.manager.ingress.host }}
+    {{- end }}
+  {{- if .Values.manager.ingress.tls }}
+  tls:
+{{ toYaml .Values.manager.ingress.tls | indent 4 }}
+  {{- end }}
+{{- end }}
