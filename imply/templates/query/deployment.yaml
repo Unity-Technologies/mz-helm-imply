@@ -1,0 +1,149 @@
+{{- if and .Values.deployments.agents (gt (.Values.query.replicaCount | int64) 0) -}}
+{{- $volumeClaim := .Values.volumeClaim | default dict -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imply.query.fullname" . }}
+  labels:
+{{ include "imply.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.query.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "imply.query.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "imply.query.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        imply.io/resource: "true"
+      {{- with .Values.query.labels }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.query.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.agents.terminationGracePeriodSeconds }}
+    {{- with .Values.images.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- if .Values.query.serviceAccountName }}
+      serviceAccountName: {{ .Values.query.serviceAccountName }}
+    {{- end }}
+    {{- if .Values.query.schedulerName }}
+      schedulerName: {{ .Values.query.schedulerName }}
+    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.images.agent.repository }}:{{ .Values.images.agent.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+
+          env:
+            - name: IMPLY_MANAGER_HOST
+              value: "{{ tpl .Values.agents.managerHost . }}"
+            - name: IMPLY_MANAGER_AGENT_CLUSTER
+              value: {{ .Values.agents.clusterName }}
+            - name: IMPLY_MANAGER_AGENT_NODE_TYPE
+              value: query
+          {{- if .Values.security.tls }}
+            - name: IMPLY_MANAGER_CA_CERT_PATH
+              value: /etc/imply/ca/tls.crt
+          {{- end }}
+          {{- if .Values.security.auth }}
+            - name: IMPLY_MANAGER_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.security.auth.secretName }}
+                  key: auth-token
+          {{- end }}
+            - name: druid_common_runtime_druid_host
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: pivot_config_ownhostname
+              value: "ownHostname: \"%{druid_common_runtime_druid_host}%\""
+          {{- with .Values.query.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          ports:
+            - name: broker
+              containerPort: 8082
+            - name: broker-tls
+              containerPort: 8282
+            - name: router
+              containerPort: 8888
+            - name: router-tls
+              containerPort: 9088
+            - name: pivot
+              containerPort: 9095
+
+          volumeMounts:
+            - mountPath: "/mnt/var"
+              name: var-volume
+          {{- if .Values.security.tls }}
+            - mountPath: "/etc/imply/ca"
+              name: ca-secrets
+              readOnly: true
+          {{- end }}
+          {{- if $volumeClaim.enabled }}
+            - mountPath: {{ .Values.volumeClaim.mountPath }}
+              name: deep-storage
+          {{- end }}
+          {{- with .Values.query.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          livenessProbe:
+{{ include "imply.probe.livenessProbe" . | indent 12 }}
+          readinessProbe:
+{{ include "imply.probe.readinessProbe" . | indent 12 }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - /root/remove-node -c "{{ .Values.agents.clusterName }}" {{ ternary "" "-s" (empty .Values.security.tls) }}
+          resources:
+            {{- toYaml .Values.query.resources | nindent 12 }}
+{{- if .Values.query.sidecarContainers }}
+{{- toYaml .Values.query.sidecarContainers | nindent 8 }}
+{{- end }}
+      volumes:
+        - name: var-volume
+          emptyDir: {}
+      {{- if .Values.security.tls }}
+        - name: ca-secrets
+          secret:
+            secretName: {{ .Values.security.tls.secretName }}
+            items:
+              - key: tls.crt
+                path: tls.crt
+      {{- end }}
+      {{- if $volumeClaim.enabled }}
+        - name: deep-storage
+          persistentVolumeClaim:
+            claimName: {{ include "imply.storage.fullname" . }}
+      {{- end }}
+      {{- with .Values.query.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.query.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.query.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.query.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+{{- end }}
