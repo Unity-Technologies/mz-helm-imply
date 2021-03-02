@@ -3,11 +3,11 @@ entries:
   imply:
   - apiVersion: v1
     appVersion: "1.0"
-    created: "2021-03-01T18:56:59.766343-08:00"
+    created: "2021-03-01T20:02:55.731063-08:00"
     description: A Helm chart for Kubernetes
     digest: 0662cef339bb8e7c65d06b5adaf584f883e6631497dad139b60aa16a40798311
     name: imply
     urls:
-    - https://studious-tribble-49c83228.pages.github.io/charts/imply-0.4.11.tgz
+    - https://studious-tribble-49c83228.pages.github.io/mz-helm-imply/imply-0.4.11.tgz
     version: 0.1.0
-generated: "2021-03-01T18:56:59.760856-08:00"
+generated: "2021-03-01T20:02:55.725117-08:00"
