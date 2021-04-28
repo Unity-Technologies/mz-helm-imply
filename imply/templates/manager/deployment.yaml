@@ -25,10 +25,15 @@ spec:
       {{- with .Values.manager.labels }}
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- with .Values.manager.annotations }}
+    {{- if or .Values.manager.annotations .Values.manager.kubernetesMode }}
       annotations:
-{{ toYaml . | indent 8 }}
+      {{- if .Values.manager.kubernetesMode }}
+        checksum/configmap: {{ include (print $.Template.BasePath "/manager/config-map.yaml") . | sha256sum }}
       {{- end }}
+      {{- if .Values.manager.annotations }}
+{{ toYaml .Values.manager.annotations | indent 8 }}
+      {{- end }}
+    {{- end }}
     spec:
     {{- with .Values.images.imagePullSecrets }}
       imagePullSecrets:
@@ -39,6 +44,10 @@ spec:
     {{- end }}
     {{- if .Values.manager.schedulerName }}
       schedulerName: {{ .Values.manager.schedulerName }}
+    {{- end }}
+    {{- if .Values.manager.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.manager.extraInitContainers | nindent 8 }}
     {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -72,6 +81,10 @@ spec:
             value: "{{ .Values.manager.kubernetesMode.instanceTypeNodeSelectorLabel }}"
           - name: IMPLY_MANAGER_HELM_CHART_LOCATION
             value: "{{ .Values.manager.kubernetesMode.helmChartLocation }}"
+        {{- if .Values.manager.ingress.host }}
+          - name: imply_manager_onprem_kubernetes_ingressHost
+            value: "{{ .Values.manager.ingress.host }}"
+        {{- end }}
         {{- end }}
         {{- if .Values.security.tls }}
           - name: IMPLY_MANAGER_CA_KEY_PATH
@@ -131,6 +144,12 @@ spec:
           - name: imply_defaults_deepStoragePassword
             value: "{{ .Values.druid.deepStorage.password }}"
           {{- end }}
+
+          {{- if .Values.druid.implyVersion }}
+            - name: imply_defaults_implyVersion
+              value: "{{ .Values.druid.implyVersion }}"
+          {{- end }}
+
           {{- if .Values.druid.commonRuntimeProperties }}
           - name: imply_defaults_commonCustomDruidProperties
             value: '{{ tpl (join "\\n" .Values.druid.commonRuntimeProperties) . }}'

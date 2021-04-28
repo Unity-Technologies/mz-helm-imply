@@ -6,17 +6,17 @@ metadata:
   name: {{ include "imply.manager.fullname" . }}
   labels:
 {{ include "imply.labels" . | indent 4 }}
-  annotations:
-  {{- if .Values.manager.kubernetesMode }}
-    networking.gke.io/managed-certificates: {{ include "imply.manager.fullname" . }}
-  {{- end}}
   {{- with .Values.manager.ingress.annotations }}
-    {{- toYaml . | nindent 4 }}
+  annotations:
+{{ toYaml . | indent 4 }}
   {{- end }}
 spec:
   rules:
     - http:
         paths:
+    {{ if .Values.manager.ingress.extraPaths }}
+{{ toYaml .Values.manager.ingress.extraPaths | indent 10 }}
+    {{- end }}
     {{- if .Values.manager.ingress.paths }}
     {{- range .Values.manager.ingress.paths }}
           - path: {{ . }}

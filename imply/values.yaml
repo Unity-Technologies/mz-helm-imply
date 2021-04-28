@@ -4,7 +4,7 @@ fullnameOverride:
 images:
   manager:
     repository: imply/manager
-    tag: "2021.02"
+    tag: "2021.04"
   agent:
     repository: imply/agent
     tag: v1
@@ -95,6 +95,7 @@ manager:
   extraEnv: []
   extraVolumes: []
   extraVolumeMounts: []
+  extraInitContainers: []
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -132,6 +133,14 @@ druid:
     path: "s3://imply/"
     user: imply
     password: implypassword
+
+  # The default Imply version for clusters. If empty, the default is the latest available or
+  # if no connection to the internet is available, the version packaged with the manager.
+  #
+  # Example:
+  # implyVersion: "2021.02"
+  #
+  implyVersion: ""
 
   commonRuntimeProperties:
     - "# MinIO configurations"
@@ -262,6 +271,11 @@ dataTier1:
   labels: {}
   serviceAccountName: ""
   schedulerName: ""
+  # Updates vm.max_map_count to the specified value.
+  sysctlInitContainer:
+    enabled: true
+    sysctlVmMaxMapCount: 500000
+    sysctlKernelThreadsMax: 999999
 
 dataTier2:
   replicaCount: 0
@@ -301,6 +315,11 @@ dataTier2:
   labels: {}
   serviceAccountName: ""
   schedulerName: ""
+  # Updates vm.max_map_count to the specified value.
+  sysctlInitContainer:
+    enabled: true
+    sysctlVmMaxMapCount: 500000
+    sysctlKernelThreadsMax: 999999
 
 dataTier3:
   replicaCount: 0
@@ -340,6 +359,11 @@ dataTier3:
   labels: {}
   serviceAccountName: ""
   schedulerName: ""
+  # Updates vm.max_map_count to the specified value.
+  sysctlInitContainer:
+    enabled: true
+    sysctlVmMaxMapCount: 500000
+    sysctlKernelThreadsMax: 999999
 
 # ------------------------------------------------------------------------------
 # Zookeeper

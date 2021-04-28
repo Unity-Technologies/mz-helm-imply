@@ -58,6 +58,26 @@ spec:
     {{- if .dataTierValues.schedulerName }}
       schedulerName: {{ .dataTierValues.schedulerName }}
     {{- end }}
+    {{- if .dataTierValues.sysctlInitContainer.enabled }}
+      initContainers:
+      - name: configure-sysctl
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        image: "{{ .Values.images.agent.repository }}:{{ .Values.images.agent.tag }}"
+        imagePullPolicy: "{{ .Values.images.pullPolicy }}"
+        command:
+        - sh
+        - -c
+        - |
+          #!/bin/bash -eu
+      {{- if .dataTierValues.sysctlInitContainer.sysctlVmMaxMapCount }}
+          sysctl -w "vm.max_map_count={{ .dataTierValues.sysctlInitContainer.sysctlVmMaxMapCount }}"
+      {{- end }}
+      {{- if .dataTierValues.sysctlInitContainer.sysctlKernelThreadsMax }}
+          sysctl -w "kernel.threads-max={{ .dataTierValues.sysctlInitContainer.sysctlKernelThreadsMax }}"
+      {{- end }}
+    {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.images.agent.repository }}:{{ .Values.images.agent.tag }}"
